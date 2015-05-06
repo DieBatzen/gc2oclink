@@ -12,14 +12,17 @@
 // ======================================================================
 
 // ==UserScript==
-// @name           Gc2OcLink
-// @namespace      userscripts.org
-// @include        http://www.geocaching.com/seek/cache_details*
-// @include        http*://www.geocaching.com/my/*
-// @include        http*://www.geocaching.com/bookmarks/view*
-// @include        http*://www.geocaching.com/seek/nearest*
-// @include        http*://www.geocaching.com/geocache/*
-// @grant          GM_xmlhttpRequest
+// @name            Gc2OcLink
+// @copyright       2010-2015 Matthias Hoefel & Robert Walter
+// @license         GPLv3 , http://www.gnu.org/copyleft/gpl.html
+// @oujs:author     Metrax
+// @homepageURL     http://sourceforge.net/projects/gc2oclink/
+// @include         http://www.geocaching.com/seek/cache_details*
+// @include         http*://www.geocaching.com/my/*
+// @include         http*://www.geocaching.com/bookmarks/view*
+// @include         http*://www.geocaching.com/seek/nearest*
+// @include         http*://www.geocaching.com/geocache/*
+// @grant           GM_xmlhttpRequest
 // ==/UserScript==
 
 var VERSION = "0.3.0";
