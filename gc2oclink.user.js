@@ -25,6 +25,8 @@
 // @include         http*://www.geocaching.com/seek/nearest*
 // @include         http*://www.geocaching.com/geocache/*
 // @grant           GM_xmlhttpRequest
+// @updateURL       https://openuserjs.org/meta/Metrax/Gc2OcLink.meta.js
+// @downloadURL     https://openuserjs.org/install/Metrax/Gc2OcLink.user.js
 // ==/UserScript==
 
 var VERSION = "0.3.0";
