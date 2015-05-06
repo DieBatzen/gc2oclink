@@ -13,7 +13,7 @@
 
 // ==UserScript==
 // @name            Gc2OcLink
-// @description     gc2oc Link provides a link to a opencaching.de listing from a geocaching.com listing. The user has to install a greasemonkey skript to add the link to the GC listing page.
+// @description     Gc2OcLink provides a link to a opencaching.de listing from a geocaching.com listing. The user has to install a greasemonkey script to add the link to the GC listing page.
 // @copyright       2010-2015 Matthias Hoefel & Robert Walter
 // @license         GPLv3 , http://www.gnu.org/copyleft/gpl.html
 // @oujs:author     Metrax
