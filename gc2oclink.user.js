@@ -1,10 +1,4 @@
-// ======================================================================
-// Repository path:    $HeadURL: https://gc2oclink.svn.sourceforge.net/svnroot/gc2oclink/trunk/src/gc2ocLink/gc2oclink.user.js $
-// Last committed:     $Revision: 66 $
-// Last changed by:    $Author: mhoefel $
-// Last changed date:    $Date: 2011-10-23 23:53:20 +0200 (So, 23 Okt 2011) $
-// ======================================================================
-// Copyright (C) 2010  Matthias Hoefel
+// Copyright (C) 2010-2015  Matthias Hoefel & Robert Walter
 //
 // This program is free software; you can redistribute it and/or modify 
 // it under the terms of the GNU General Public License as published by 
@@ -24,16 +18,18 @@
 // @include        http*://www.geocaching.com/my/*
 // @include        http*://www.geocaching.com/bookmarks/view*
 // @include        http*://www.geocaching.com/seek/nearest*
+// @include        http*://www.geocaching.com/geocache/*
+// @grant          GM_xmlhttpRequest
 // ==/UserScript==
 
-var VERSION = "0.2.2";
-var DEBUG = true;
+var VERSION = "0.3.0";
+var DEBUG = false;
 
 var LABEL_HEADER = "Also listed at";
 
 if (document.URL.search("www\.geocaching\.com\/my\/") >= 0) {
     modifyMyProfile();
-} else if (document.URL.search("cache_details\.aspx") >= 0) {
+} else if (document.URL.search("\/geocache\/") >= 0) {
     modifyCacheDetails();
 } else if (document.URL.search("www\.geocaching\.com\/bookmarks\/view\.aspx") >= 0) {
     modifyBookmarkList();
@@ -160,6 +156,7 @@ function modifyCacheDetails() {
 
     //var cacheCodeWidget = document.getElementById("ctl00_ContentBody_uxWaypointName");
     var cacheCodeWidget = document.getElementById("ctl00_ContentBody_CoordInfoLinkControl1_uxCoordInfoCode");
+    
     var gcWaypoint = getGCCOMWayPointFromElement(cacheCodeWidget);
     
     var spanElement = createOCLink(gcWaypoint, "opencaching.de");
@@ -192,39 +189,43 @@ function modifyBookmarkList() {
     var headerCell = document.createElement("th");
     headerCell.appendChild(document.createTextNode(LABEL_HEADER));
     headerRow.appendChild(headerCell);
-    
 
-    var tableBody = findFirstChildNodeByName(tableTag.childNodes, "TBODY");
-    
-    var tableRows = tableBody.childNodes;
-    
-    for ( var i = 0; i < tableRows.length; i++) {
+    var tableRows = document.getElementsByTagName('TR');
+    var count=0;
+    for(var i=0;i<tableRows.length;i++) {
+      if(tableRows[i].id.match('^ctl00_ContentBody_ListInfo_BookmarkWpts_ctl.._dataRow$')) {
+        debug(tableRows[i].innerHTML);
         addLinkColumn2BookmarkListRow(tableRows[i]);
-    }
-
+      }  
+    } 
 }
 
 function addLinkColumn2BookmarkListRow(tableRow) {
+    
     if (tableRow.attributes && tableRow.getAttribute("id")) {
         // The row with a id is the first row of the two lined entry.
-        
         // dangerous! position might be subject to change!
-        var wayPointLink = tableRow.getElementsByTagName("TD")[2].firstChild;
+        var wayPointLink = tableRow.getElementsByTagName("TD")[3];
         
-        var gcWayPoint = wayPointLink.firstChild.nodeValue;
-        debug("gcWayPoint = " + gcWayPoint);
+        var gcWayPoint = getGCCOMWayPointFromElement(wayPointLink);
+        
+        if(gcWayPoint != '') {
+            debug("gcWayPoint = " + gcWayPoint);
+            var cell = document.createElement("td");
+            if (gcWayPoint.match(/(GC[A-Z0-9]+)/)) {
+                cell.appendChild(createOCLink(gcWayPoint, "oc.de"));
+            } else {
+                cell.appendChild(document.createTextNode("Failed to get GC-Waypoint. Update to a new version of gc2oc link."));
+            }
             
-        var cell = document.createElement("td");
-        if (gcWayPoint.match(/(GC[A-Z0-9]+)/)) {
-            cell.appendChild(createOCLink(gcWayPoint, "oc.de"));
-        } else {
-            cell.appendChild(document.createTextNode("Failed to get GC-Waypoint. Update to a new version of gc2oc link."));
+            var rowSpan = document.createAttribute("rowspan");
+            
+            rowSpan.nodeValue="2";
+            cell.setAttributeNode(rowSpan);
+            tableRow.appendChild(cell);
         }
-        var rowSpan = document.createAttribute("rowspan");
-        rowSpan.nodeValue="2";
-        cell.setAttributeNode(rowSpan);
-        tableRow.appendChild(cell);
     }
+    debug("test");
 }
 
 function modifySearchResultList() {
@@ -276,9 +277,10 @@ function modifySearchResultList() {
 }
 
 function getGCCOMWayPointFromElement(element) {
-    var regex = /(GC[A-Z0-9]+)/;
-    debug("Geocache:", element.textContent.match(regex));
-    return RegExp.$1;
+    var regex = /(GC[A-Z0-9]{1,5})+/;
+    var cache = element.textContent.match(regex);
+    debug("Geocache: " + cache[0]);
+    return cache[0];
 }
 
 function getLatLonSpan() {
@@ -327,6 +329,16 @@ function parseXML_GetFoundFlag(dom) {
     return foundFlag;
 }
 
+function parseXML_GetInactiveFlag(dom) {
+    var caches = dom.getElementsByTagName("cache");
+
+    if (caches.length < 1)
+        return false;
+
+    var inactiveFlag = caches[0].getAttribute("inactive");
+    return inactiveFlag;
+}
+
 /**
  * Parses the oc waypoint from the request response.
  * 
@@ -346,7 +358,7 @@ function parseXML_GetOCwp(dom) {
 
 function debug(message) {
     if (DEBUG && console) {
-        GM_log(message);
+        console.debug(message);
     }
 }
 
@@ -386,10 +398,14 @@ function createOCLink(gcWaypoint, linkLabel) {
                 linkElement.href = "http://www.opencaching.de/viewcache.php?wp=" + ocwp;
                 linkElement.target = "_blank";
                 linkElement.appendChild(document.createTextNode(ocwp));
-
+                var inactiveFlag = parseXML_GetInactiveFlag(dom);
+                if(inactiveFlag == '1') {
+                    linkElement.style.textDecoration = "line-through";
+                }
                 spanElement.appendChild(linkElement);
                 
                 var foundFlag = parseXML_GetFoundFlag(dom);
+                
                 
                 if (foundFlag && foundFlag == '1') {
                     spanElement.appendChild(document.createTextNode(" "));
