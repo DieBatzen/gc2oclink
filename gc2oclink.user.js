@@ -14,9 +14,9 @@
 // ==UserScript==
 // @name            Gc2OcLink
 // @description     Gc2OcLink provides a link to a opencaching.de listing from a geocaching.com listing. The user has to install a greasemonkey script to add the link to the GC listing page.
-// @copyright       2010-2015 Matthias Hoefel & Robert Walter
+// @copyright       2010-2015 Matthias Hoefel & Robert Walter, special thanks to Michael Walter
 // @license         GPLv3 , http://www.gnu.org/copyleft/gpl.html
-// @version         0.3.0
+// @version         0.3.1
 // @oujs:author     Metrax
 // @homepageURL     https://openuserjs.org/scripts/Metrax/Gc2OcLink
 // @include         http://www.geocaching.com/seek/cache_details*
@@ -24,12 +24,13 @@
 // @include         http*://www.geocaching.com/bookmarks/view*
 // @include         http*://www.geocaching.com/seek/nearest*
 // @include         http*://www.geocaching.com/geocache/*
+// @include         http*://www.geocaching.com/play/search/*
 // @grant           GM_xmlhttpRequest
 // @updateURL       https://openuserjs.org/meta/Metrax/Gc2OcLink.meta.js
 // @downloadURL     https://openuserjs.org/install/Metrax/Gc2OcLink.user.js
 // ==/UserScript==
 
-var VERSION = "0.3.0";
+var VERSION = "0.3.1";
 var DEBUG = false;
 
 var LABEL_HEADER = "Also listed at";
@@ -42,6 +43,8 @@ if (document.URL.search("www\.geocaching\.com\/my\/") >= 0) {
     modifyBookmarkList();
 } else if (document.URL.search("www\.geocaching\.com\/seek\/nearest\.aspx") >= 0) {
     modifySearchResultList();
+} else if (document.URL.search("www\.geocaching\.com\/play\/search\/") >= 0) {
+    modifyNewSearchResultList();
 }
 
 function modifyMyProfile() {
@@ -283,6 +286,49 @@ function modifySearchResultList() {
     }
 }
 
+function modifyNewSearchResultList() {
+        debug("modify new search result list");
+        var resultTable = document.getElementById("searchResultsTable");
+        
+        // Build Table Header
+        var tableHeads = resultTable.getElementsByTagName("THEAD");
+        var tableHeadRows = tableHeads[0].getElementsByTagName("TR");
+		var tableColGroup = resultTable.getElementsByTagName("COLGROUP");
+		ColCell = document.createElement("col");
+		tableColGroup[0].appendChild(ColCell);
+		
+        HeaderCell = document.createElement("th");
+        HeaderCell.setAttribute("class", "sort-column");
+        HeaderCell.setAttribute("scope", "col");
+        HeaderCell.style.width = "10%";
+        HeaderCellText = document.createElement("a");
+        HeaderCellText.setAttribute("class", "outbound-link");
+        HeaderCellText.appendChild(document.createTextNode("OC"));
+        HeaderCell.appendChild(HeaderCellText);
+        tableHeadRows[0].appendChild(HeaderCell);
+        
+        // Manipulate Cache Rows
+        var tableBodies = resultTable.getElementsByTagName("TBODY");
+        var tableRows = tableBodies[0].getElementsByTagName("TR");     
+        for ( var i = 0; i < tableRows.length; i++) {
+            tableCols = tableRows[i].getElementsByTagName("TD");
+            tableColLinks = tableCols[0].getElementsByTagName("A");
+            tableColSpans = tableColLinks[0].getElementsByTagName("SPAN");
+            if(tableColSpans[1].innerHTML == "Premium" || tableColSpans[1].innerHTML == "Disabled") {
+                CacheText = tableColSpans[3];
+            } else {
+                CacheText = tableColSpans[2];
+            }
+            CacheCode = getGCCOMWayPointFromElement(CacheText);
+            OCCell = document.createElement("td");
+            OCCell.setAttribute("class","mobile-show pri-1");
+            OCCell.appendChild(createOCLink(CacheCode));
+            tableRows[i].appendChild(OCCell);
+        }
+
+}
+
+
 function getGCCOMWayPointFromElement(element) {
     var regex = /(GC[A-Z0-9]{1,5})+/;
     var cache = element.textContent.match(regex);
@@ -387,6 +433,7 @@ function createOCLink(gcWaypoint, linkLabel) {
     GM_xmlhttpRequest( {
         method : 'GET',
         url : urlString,
+        timeout : 1000,
         headers : {
             'User-agent' : 'gc2oclink (greasemonkey)' + VERSION,
             'Accept' : 'text/xml'
@@ -422,6 +469,12 @@ function createOCLink(gcWaypoint, linkLabel) {
                     spanElement.appendChild(foundIcon);
                 }
             }
+        },
+        ontimeout : function (responseDetails) {
+            spanElement.appendChild(document.createTextNode("Connection error"));
+        },
+        onerror : function (responseDetails) {
+            spanElement.appendChild(document.createTextNode("Connection error"));
         }
     });
     return spanElement;
