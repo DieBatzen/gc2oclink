@@ -16,7 +16,7 @@
 // @description     Gc2OcLink provides a link to a opencaching.de listing from a geocaching.com listing. The user has to install a greasemonkey script to add the link to the GC listing page.
 // @copyright       2010-2015 Matthias Hoefel & Robert Walter, special thanks to Michael Walter
 // @license         GPLv3 , http://www.gnu.org/copyleft/gpl.html
-// @version         0.3.1
+// @version         0.3.2
 // @oujs:author     Metrax
 // @homepageURL     https://openuserjs.org/scripts/Metrax/Gc2OcLink
 // @include         http://www.geocaching.com/seek/cache_details*
@@ -30,7 +30,7 @@
 // @downloadURL     https://openuserjs.org/install/Metrax/Gc2OcLink.user.js
 // ==/UserScript==
 
-var VERSION = "0.3.1";
+var VERSION = "0.3.2";
 var DEBUG = false;
 
 var LABEL_HEADER = "Also listed at";
@@ -312,18 +312,24 @@ function modifyNewSearchResultList() {
         var tableRows = tableBodies[0].getElementsByTagName("TR");     
         for ( var i = 0; i < tableRows.length; i++) {
             tableCols = tableRows[i].getElementsByTagName("TD");
-            tableColLinks = tableCols[0].getElementsByTagName("A");
-            tableColSpans = tableColLinks[0].getElementsByTagName("SPAN");
-            if(tableColSpans[1].innerHTML == "Premium" || tableColSpans[1].innerHTML == "Disabled") {
-                CacheText = tableColSpans[3];
+            if(tableCols[0].innerHTML.indexOf("Upgrade Now") != -1) {
+                
             } else {
-                CacheText = tableColSpans[2];
+                tableColLinks = tableCols[0].getElementsByTagName("A");
+                tableColSpans = tableColLinks[0].getElementsByTagName("SPAN");
+                if(tableColSpans[1].innerHTML == "Premium" || tableColSpans[1].innerHTML == "Disabled" || tableColSpans[1].innerHTML.indexOf("*Upgrade Now*") != -1) {
+                    CacheText = tableColSpans[3];
+                } else {
+                    CacheText = tableColSpans[2];
+                }
+                CacheCode = getGCCOMWayPointFromElement(CacheText);
+                OCCell = document.createElement("td");
+                OCCell.setAttribute("class","mobile-show pri-1");
+                //OCCell.style.width = "10%";
+                OCCell.appendChild(createOCLink(CacheCode)); 
+                //OCCell.className = 'pri-1';
+                tableRows[i].appendChild(OCCell);
             }
-            CacheCode = getGCCOMWayPointFromElement(CacheText);
-            OCCell = document.createElement("td");
-            OCCell.setAttribute("class","mobile-show pri-1");
-            OCCell.appendChild(createOCLink(CacheCode));
-            tableRows[i].appendChild(OCCell);
         }
 
 }
@@ -433,7 +439,7 @@ function createOCLink(gcWaypoint, linkLabel) {
     GM_xmlhttpRequest( {
         method : 'GET',
         url : urlString,
-        timeout : 1000,
+        timeout : 5000,
         headers : {
             'User-agent' : 'gc2oclink (greasemonkey)' + VERSION,
             'Accept' : 'text/xml'
