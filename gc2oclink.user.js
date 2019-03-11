@@ -186,11 +186,11 @@ function modifyBookmarkList() {
     debug("modify bookmark list");
 
     // Get the nearest element with an id
-    var abuseReportDiv = document.getElementById("ctl00_ContentBody_ListInfo_uxAbuseReport");
+    var abuseReportDiv = document.getElementById("ctl00_ContentBody_ListInfo_foundIt");
 
     debug("entrypoint found: " + abuseReportDiv);
 
-    var tableTag = findFirstChildNodeByClass(abuseReportDiv.parentNode.childNodes, "Table NoBottomSpacing");
+    var tableTag = findFirstChildNodeByClass(abuseReportDiv.parentNode.parentNode.parentNode.parentNode.childNodes, "Table NoBottomSpacing");
     if (!tableTag) {
         debug("table tag not found");
         return;
@@ -478,7 +478,7 @@ function createOCLink(gcWaypoint, linkLabel) {
             }
         },
         ontimeout : function (responseDetails) {
-            spanElement.appendChild(document.createTextNode("Connection error"));
+            spanElement.appendChild(document.createTextNode("Connection timeout"));
         },
         onerror : function (responseDetails) {
             spanElement.appendChild(document.createTextNode("Connection error"));
