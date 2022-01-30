@@ -24,7 +24,7 @@
 // @include         http*://www.geocaching.com/bookmarks/view*
 // @include         http*://www.geocaching.com/seek/nearest*
 // @include         http*://www.geocaching.com/geocache/*
-// @include         http*://www.geocaching.com/play/search/*
+// @include         http*://www.geocaching.com/play/search*
 // @grant           GM_xmlhttpRequest
 // @updateURL       https://openuserjs.org/meta/Metrax/Gc2OcLink.meta.js
 // @downloadURL     https://openuserjs.org/install/Metrax/Gc2OcLink.user.js
@@ -35,7 +35,8 @@ var DEBUG = false;
 
 var LABEL_HEADER = "OC Link";
 
-if (document.URL.search("www\.geocaching\.com\/my\/") >= 0) {
+var regex = new RegExp("www.geocaching.com/my/$");
+if (document.URL.match(regex)) {
     modifyMyProfile();
 } else if (document.URL.search("www\.geocaching\.com\/geocache\/") >= 0) {
     modifyCacheDetails();
@@ -45,7 +46,7 @@ if (document.URL.search("www\.geocaching\.com\/my\/") >= 0) {
     modifyBookmarkList();
 } else if (document.URL.search("www\.geocaching\.com\/seek\/nearest\.aspx") >= 0) {
     modifySearchResultList();
-} else if (document.URL.search("www\.geocaching\.com\/play\/search\/") >= 0) {
+} else if (document.URL.search("www\.geocaching\.com\/play\/search") >= 0) {
     modifyNewSearchResultList();
 }
 
@@ -297,19 +298,22 @@ function modifySearchResultList() {
 function modifyNewSearchResultList() {
         debug("modify new search result list");
         var resultTable = document.getElementById("searchResultsTable");
+		
+		// initially, there are no search results
+		if (!resultTable) return;
 
         // Build Table Header
         var tableHeads = resultTable.getElementsByTagName("THEAD");
         var tableHeadRows = tableHeads[0].getElementsByTagName("TR");
 		var tableColGroup = resultTable.getElementsByTagName("COLGROUP");
-		ColCell = document.createElement("col");
+		var ColCell = document.createElement("col");
 		tableColGroup[0].appendChild(ColCell);
 
-        HeaderCell = document.createElement("th");
+        var HeaderCell = document.createElement("th");
         HeaderCell.setAttribute("class", "sort-column");
         HeaderCell.setAttribute("scope", "col");
         HeaderCell.style.width = "10%";
-        HeaderCellText = document.createElement("a");
+        var HeaderCellText = document.createElement("a");
         HeaderCellText.setAttribute("class", "outbound-link");
         HeaderCellText.appendChild(document.createTextNode("OC"));
         HeaderCell.appendChild(HeaderCellText);
@@ -319,16 +323,16 @@ function modifyNewSearchResultList() {
         var tableBodies = resultTable.getElementsByTagName("TBODY");
         var tableRows = tableBodies[0].getElementsByTagName("TR");
         for ( var i = 0; i < tableRows.length; i++) {
-            tableCols = tableRows[i].getElementsByTagName("TD");
+            var tableCols = tableRows[i].getElementsByTagName("TD");
             //tableColLinks = tableCols[0].getElementsByTagName("A"); // basic
-            tableColLinks = tableCols[1].getElementsByTagName("A"); // premium
+            var tableColLinks = tableCols[1].getElementsByTagName("A"); // premium
             if(tableColLinks[0].innerHTML == "Upgrade Now") {
-                CacheText = tableColLinks[1];
+                var CacheText = tableColLinks[1];
             } else {
-                CacheText = tableColLinks[0];
+                var CacheText = tableColLinks[0];
             }
-            CacheCode = getGCCOMWayPointFromElement(CacheText);
-            OCCell = document.createElement("td");
+            var CacheCode = getGCCOMWayPointFromElement(CacheText);
+            var OCCell = document.createElement("td");
             OCCell.setAttribute("class","mobile-show pri-1");
             //OCCell.style.width = "10%";
             OCCell.appendChild(createOCLink(CacheCode));
