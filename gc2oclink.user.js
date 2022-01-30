@@ -256,15 +256,18 @@ function modifySearchResultList() {
         var rowClass = tableRows[i].getAttribute("class");
         var searchListHeaderRowClass = "BorderTop";
         var ownSearchListRowClass = "TertiaryRow Data BorderTop";
+		var ownSearchListOwnedRowClass = "UserOwned Data BorderTop";
         var friendSearchListRowClass = "SolidRow Data BorderTop";
         var friendSearchListAlternatingRowClass = "AlternatingRow Data BorderTop";
         if (rowClass == ownSearchListRowClass ||
+				rowClass == ownSearchListOwnedRowClass ||
                 rowClass == friendSearchListRowClass ||
                 rowClass == friendSearchListAlternatingRowClass ||
                 rowClass == searchListHeaderRowClass ) {
 
             var cell;
             if (rowClass == ownSearchListRowClass ||
+                    rowClass == ownSearchListOwnedRowClass ||
                     rowClass == friendSearchListRowClass ||
                     rowClass == friendSearchListAlternatingRowClass) {
                 cell = document.createElement("td");
