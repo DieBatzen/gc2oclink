@@ -447,7 +447,7 @@ function createOCLink(gcWaypoint, linkLabel) {
     GM_xmlhttpRequest( {
         method : 'GET',
         url : urlString,
-        timeout : 5000,
+        timeout : 10000,
         headers : {
             'User-agent' : 'gc2oclink (greasemonkey)' + VERSION,
             'Accept' : 'text/xml'
