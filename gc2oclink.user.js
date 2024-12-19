@@ -19,12 +19,12 @@
 // @version         0.3.2
 // @oujs:author     Metrax
 // @homepageURL     https://openuserjs.org/scripts/Metrax/Gc2OcLink
-// @include         http*://www.geocaching.com/seek/cache_details*
 // @include         http*://www.geocaching.com/my/*
+// @include         http*://www.geocaching.com/seek/cache_details*
+// @include         http*://www.geocaching.com/geocache/*
 // @include         http*://www.geocaching.com/bookmarks/view*
 // @include         http*://www.geocaching.com/seek/nearest*
-// @include         http*://www.geocaching.com/geocache/*
-// @include         http*://www.geocaching.com/play/search*
+// @include         http*://www.geocaching.com/play/results*
 // @grant           GM_xmlhttpRequest
 // @updateURL       https://openuserjs.org/meta/Metrax/Gc2OcLink.meta.js
 // @downloadURL     https://openuserjs.org/install/Metrax/Gc2OcLink.user.js
@@ -38,15 +38,15 @@ var LABEL_HEADER = "OC Link";
 var regex = new RegExp("www.geocaching.com/my/$");
 if (document.URL.match(regex)) {
     modifyMyProfile();
-} else if (document.URL.search("www\.geocaching\.com\/geocache\/") >= 0) {
-    modifyCacheDetails();
 } else if (document.URL.search("www\.geocaching\.com\/seek\/cache_details\.aspx") >= 0) {
+    modifyCacheDetails();
+} else if (document.URL.search("www\.geocaching\.com\/geocache\/") >= 0) {
     modifyCacheDetails();
 } else if (document.URL.search("www\.geocaching\.com\/bookmarks\/view\.aspx") >= 0) {
     modifyBookmarkList();
 } else if (document.URL.search("www\.geocaching\.com\/seek\/nearest\.aspx") >= 0) {
     modifySearchResultList();
-} else if (document.URL.search("www\.geocaching\.com\/play\/search") >= 0) {
+} else if (document.URL.search("www\.geocaching\.com\/play\/results") >= 0) {
     modifyNewSearchResultList();
 }
 
@@ -167,7 +167,6 @@ function modifyCacheDetails() {
     go2olpBody.setAttribute("class", "WidgetBody");
     go2olpBody.setAttribute("id", "go2olpBody");
 
-    //var cacheCodeWidget = document.getElementById("ctl00_ContentBody_uxWaypointName");
     var cacheCodeWidget = document.getElementById("ctl00_ContentBody_CoordInfoLinkControl1_uxCoordInfoCode");
 
     var gcWaypoint = getGCCOMWayPointFromElement(cacheCodeWidget);
@@ -296,52 +295,17 @@ function modifySearchResultList() {
 }
 
 function modifyNewSearchResultList() {
-        debug("modify new search result list");
-        var resultTable = document.getElementById("searchResultsTable");
-		
-		// initially, there are no search results
-		if (!resultTable) return;
+    debug("modify new search result list");
 
-        // Build Table Header
-        var tableHeads = resultTable.getElementsByTagName("THEAD");
-        var tableHeadRows = tableHeads[0].getElementsByTagName("TR");
-		var tableColGroup = resultTable.getElementsByTagName("COLGROUP");
-		var ColCell = document.createElement("col");
-		tableColGroup[0].appendChild(ColCell);
-
-        var HeaderCell = document.createElement("th");
-        HeaderCell.setAttribute("class", "sort-column");
-        HeaderCell.setAttribute("scope", "col");
-        HeaderCell.style.width = "10%";
-        var HeaderCellText = document.createElement("a");
-        HeaderCellText.setAttribute("class", "outbound-link");
-        HeaderCellText.appendChild(document.createTextNode("OC"));
-        HeaderCell.appendChild(HeaderCellText);
-        tableHeadRows[0].appendChild(HeaderCell);
-
-        // Manipulate Cache Rows
-        var tableBodies = resultTable.getElementsByTagName("TBODY");
-        var tableRows = tableBodies[0].getElementsByTagName("TR");
-        for ( var i = 0; i < tableRows.length; i++) {
-            var tableCols = tableRows[i].getElementsByTagName("TD");
-            //tableColLinks = tableCols[0].getElementsByTagName("A"); // basic
-            var tableColLinks = tableCols[1].getElementsByTagName("A"); // premium
-            if(tableColLinks[0].innerHTML == "Upgrade Now") {
-                var CacheText = tableColLinks[1];
-            } else {
-                var CacheText = tableColLinks[0];
-            }
-            var CacheCode = getGCCOMWayPointFromElement(CacheText);
-            var OCCell = document.createElement("td");
-            OCCell.setAttribute("class","mobile-show pri-1");
-            //OCCell.style.width = "10%";
-            OCCell.appendChild(createOCLink(CacheCode));
-            //OCCell.className = 'pri-1';
-            tableRows[i].appendChild(OCCell);
-        }
-
+    var gcCodes = document.querySelectorAll('li.code-display');
+    var infoCells = document.querySelectorAll('div[data-testid="info-cell"]');
+    for (var i = 0; i < infoCells.length; i++) {
+        var CacheCode = getGCCOMWayPointFromElement(gcCodes[i]);
+        var link = createOCLink(CacheCode);
+        link.style.cssFloat = 'left';
+        infoCells[i].append(link);
+    }
 }
-
 
 function getGCCOMWayPointFromElement(element) {
     var regex = /(GC[A-Z0-9]{1,5})+/;
@@ -431,7 +395,6 @@ function debug(message) {
 
 function createOCLink(gcWaypoint, linkLabel) {
     var spanElement = document.createElement("span");
-    spanElement.setAttribute("id", "go2olp_ocRef");
 
     if (linkLabel) {
         var ocLinkElement = document.createElement('a');
@@ -443,13 +406,12 @@ function createOCLink(gcWaypoint, linkLabel) {
     }
 
     var urlString = 'https://www.opencaching.de/map2.php?mode=wpsearch&wp=' + gcWaypoint;
-
     GM_xmlhttpRequest( {
         method : 'GET',
         url : urlString,
         timeout : 10000,
         headers : {
-            'User-agent' : 'gc2oclink (greasemonkey)' + VERSION,
+            'User-agent' : 'gc2oclink' + VERSION,
             'Accept' : 'text/xml'
         },
         onload : function(responseDetails) {
