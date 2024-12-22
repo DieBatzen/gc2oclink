@@ -22,7 +22,7 @@
 // @include         http*://www.geocaching.com/my/*
 // @include         http*://www.geocaching.com/seek/cache_details*
 // @include         http*://www.geocaching.com/geocache/*
-// @include         http*://www.geocaching.com/bookmarks/view*
+// @include         http*://www.geocaching.com/plan/lists/BM*
 // @include         http*://www.geocaching.com/seek/nearest*
 // @include         http*://www.geocaching.com/play/results*
 // @grant           GM_xmlhttpRequest
@@ -31,18 +31,17 @@
 // ==/UserScript==
 
 var VERSION = "0.3.2";
-var DEBUG = false;
+var DEBUG = true;
 
 var LABEL_HEADER = "OC Link";
 
 var regex = new RegExp("www.geocaching.com/my/$");
 if (document.URL.match(regex)) {
     modifyMyProfile();
-} else if (document.URL.search("www\.geocaching\.com\/seek\/cache_details\.aspx") >= 0) {
+} else if (document.URL.search("www\.geocaching\.com\/seek\/cache_details\.aspx") >= 0 ||
+    document.URL.search("www\.geocaching\.com\/geocache\/") >= 0) {
     modifyCacheDetails();
-} else if (document.URL.search("www\.geocaching\.com\/geocache\/") >= 0) {
-    modifyCacheDetails();
-} else if (document.URL.search("www\.geocaching\.com\/bookmarks\/view\.aspx") >= 0) {
+} else if (document.URL.search("www\.geocaching\.com\/plan\/lists\/BM") >= 0) {
     modifyBookmarkList();
 } else if (document.URL.search("www\.geocaching\.com\/seek\/nearest\.aspx") >= 0) {
     modifySearchResultList();
@@ -181,66 +180,31 @@ function modifyCacheDetails() {
 	lnk.parentNode.removeChild(lnk);
 }
 
-
 function modifyBookmarkList() {
+    // TODO: columns sort, next page
+
     debug("modify bookmark list");
 
-    // Get the nearest element with an id
-    var abuseReportDiv = document.getElementById("ctl00_ContentBody_ListInfo_foundIt");
+    const selector = 'thead[data-tooltip-id="list-details-table-header"] th';
+    waitForElementThenRun(selector, function() {
+        // get table header
+        var th = document.querySelectorAll(selector);
+        var last_th = th[th.length- 1];
 
-    debug("entrypoint found: " + abuseReportDiv);
+        // add OC header
+        var deep_copy = last_th.cloneNode(true);
+        deep_copy.querySelector('span').textContent = 'OC'
+        th[0].parentNode.appendChild(deep_copy);
 
-    var tableTag = findFirstChildNodeByClass(abuseReportDiv.parentNode.parentNode.parentNode.parentNode.childNodes, "Table NoBottomSpacing");
-    if (!tableTag) {
-        debug("table tag not found");
-        return;
-    }
-    debug("table tag: " + tableTag);
-
-    var tableHead = findFirstChildNodeByName(tableTag.childNodes, "THEAD");
-    var headerRow = findFirstChildNodeByName(tableHead.childNodes, "TR");
-    var headerCell = document.createElement("th");
-    headerCell.appendChild(document.createTextNode(LABEL_HEADER));
-    headerRow.appendChild(headerCell);
-
-    var tableRows = document.getElementsByTagName('TR');
-    var count=0;
-    for(var i=0;i<tableRows.length;i++) {
-      if(tableRows[i].id.match('^ctl00_ContentBody_ListInfo_BookmarkWpts_ctl.._dataRow$')) {
-        debug(tableRows[i].innerHTML);
-        addLinkColumn2BookmarkListRow(tableRows[i]);
-      }
-    }
-}
-
-function addLinkColumn2BookmarkListRow(tableRow) {
-
-    if (tableRow.attributes && tableRow.getAttribute("id")) {
-        // The row with a id is the first row of the two lined entry.
-        // dangerous! position might be subject to change!
-		if (tableRow.getElementsByTagName("td").length == 6)
-			var col = 3; // owned list
-		else
-			var col = 2; // list owned by others
-
-        var wayPointLink = tableRow.getElementsByTagName("td")[col];
-
-        var gcWayPoint = getGCCOMWayPointFromElement(wayPointLink);
-
-        if(gcWayPoint != '') {
-            debug("gcWayPoint = " + gcWayPoint);
-            var cell = document.createElement("td");
-            if (gcWayPoint.match(/(GC[A-Z0-9]+)/)) {
-                cell.appendChild(createOCLink(gcWayPoint));
-            } else {
-                cell.appendChild(document.createTextNode("Failed to get GC-Waypoint. Update to a new version of gc2oc link."));
-            }
-
-            cell.rowSpan = "2";
-			cell.style = "vertical-align:top";
-			tableRow.appendChild(cell);
+        // add OC links to rows
+        var tableRows = document.getElementsByClassName('list-geocache-row');
+        for(var i = 0; i < tableRows.length; i++) {
+            var gcCode = tableRows[i].querySelectorAll('.geocache-meta>span')[1].textContent;
+            var td = document.createElement("td");
+            td.appendChild(createOCLink(gcCode));
+            tableRows[i].appendChild(td);
         }
-    }
+    });
 }
 
 function modifySearchResultList() {
@@ -436,7 +400,6 @@ function createOCLink(gcWaypoint, linkLabel) {
 
                 var foundFlag = parseXML_GetFoundFlag(dom);
 
-
                 if (foundFlag && foundFlag == '1') {
                     spanElement.appendChild(document.createTextNode(" "));
                     var foundIcon = document.createElement('img');
@@ -499,4 +462,39 @@ function findFirstChildNodeByClass(childNodes, className) {
         }
     }
     debug("no node found with class " + className);
+}
+
+function waitForElementThenRun(selector, func, timeout) {
+    // fine, element is already available; no need to observe, run func immediately
+    if (document.querySelector(selector)) {
+        func();
+        return
+    }
+
+    timeout = timeout || 10; // default timeout after 10s
+    timeout *= 1000;
+    const t0 = Date.now();
+    console.time('waitForElementThenRun() - ' + selector);
+    let cb = function(_mutationsList, observer) {
+        // ensure that observing stops after at latest timeout [ms]
+        if (Date.now() - t0 > timeout) {
+            console.timeEnd('waitForElementThenRun() - ' + selector);
+            console.log(selector + ' not found for ' + timeout + 's');
+            observer.disconnect();
+        }
+        if (document.querySelector(selector)) {
+            console.timeEnd('waitForElementThenRun() - ' + selector);
+            observer.disconnect();
+            func();
+        }
+    }
+    // observe body for changes of child nodes
+    let target = document.querySelector('body');
+    let config = {
+        childList: true,
+        subtree: true,
+        attributes: true
+    };
+    let observer = new MutationObserver(cb);
+    if (target) observer.observe(target, config);
 }
