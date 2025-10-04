@@ -31,7 +31,7 @@
 // ==/UserScript==
 
 var VERSION = "0.3.2";
-var DEBUG = true;
+var DEBUG = false;
 
 var LABEL_HEADER = "OC Link";
 
@@ -46,7 +46,19 @@ if (document.URL.match(regex)) {
 } else if (document.URL.search("www\.geocaching\.com\/seek\/nearest\.aspx") >= 0) {
     modifySearchResultList();
 } else if (document.URL.search("www\.geocaching\.com\/play\/results") >= 0) {
-    modifyNewSearchResultList();
+    waitForElementThenRun('div[data-testid="info-cell"]', () => {
+        modifyNewSearchResultList();
+        // observe pagination for changes
+        const anchor = 'ul[aria-label="Pagination"]';
+        const target = document.querySelector(anchor),
+            config = {subtree: true, childList: true},
+            observer = new MutationObserver(() => {
+                setTimeout(() => {
+                    modifyNewSearchResultList();
+                }, 3000);
+            });
+        observer.observe(target, config);
+    });
 }
 
 function modifyMyProfile() {
@@ -267,11 +279,15 @@ function modifyNewSearchResultList() {
         var CacheCode = getGCCOMWayPointFromElement(gcCodes[i]);
         var link = createOCLink(CacheCode);
         link.style.cssFloat = 'left';
+        link.style.marginRight = '10px';
         infoCells[i].append(link);
     }
 }
 
 function getGCCOMWayPointFromElement(element) {
+    if (!element) {
+        return null;
+    }
     var regex = /(GC[A-Z0-9]{1,5})+/;
     var cache = element.textContent.match(regex);
     debug("Geocache: " + cache[0]);
@@ -342,13 +358,7 @@ function parseXML_GetInactiveFlag(dom) {
  * @return the oc waypoint or <code>false</code> if response was empty.
  */
 function parseXML_GetOCwp(dom) {
-    var caches = dom.getElementsByTagName("cache");
-
-    if (caches.length < 1)
-        return false;
-
-    var wp = caches[0].getAttribute("wpoc");
-    return wp;
+    return dom.getElementsByTagName("cache")[0]?.getAttribute("wpoc");
 }
 
 function debug(message) {
@@ -384,7 +394,7 @@ function createOCLink(gcWaypoint, linkLabel) {
             var dom = parser.parseFromString(responseDetails.responseText, "text/xml");
             var ocwp = parseXML_GetOCwp(dom);
             if (!ocwp) {
-                spanElement.appendChild(document.createTextNode("not listed"));
+                spanElement.appendChild(document.createTextNode("---"));
             } else {
                 debug('ocKey: ' + ocwp);
 
