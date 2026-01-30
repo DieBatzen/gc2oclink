@@ -49,9 +49,9 @@ if (document.URL.match(regex)) {
     waitForElementThenRun('div[data-testid="info-cell"]', () => {
         modifyNewSearchResultList();
         // observe pagination for changes
-        const anchor = 'ul[aria-label="Pagination"]';
+        const anchor = 'div[data-testid="gc-pagination"]';
         const target = document.querySelector(anchor),
-            config = {subtree: true, childList: true},
+            config = {subtree: true, childList: true, attributes: true},
             observer = new MutationObserver(() => {
                 setTimeout(() => {
                     modifyNewSearchResultList();
