@@ -22,7 +22,7 @@
 // @include         http*://www.geocaching.com/my/*
 // @include         http*://www.geocaching.com/seek/cache_details*
 // @include         http*://www.geocaching.com/geocache/*
-// @include         http*://www.geocaching.com/plan/lists/BM*
+// @include         http*://www.geocaching.com/plan/lists*
 // @include         http*://www.geocaching.com/seek/nearest*
 // @include         http*://www.geocaching.com/play/results*
 // @grant           GM_xmlhttpRequest
@@ -41,7 +41,7 @@ if (document.URL.match(regex)) {
 } else if (document.URL.search("www\.geocaching\.com\/seek\/cache_details\.aspx") >= 0 ||
     document.URL.search("www\.geocaching\.com\/geocache\/") >= 0) {
     modifyCacheDetails();
-} else if (document.URL.search("www\.geocaching\.com\/plan\/lists\/BM") >= 0) {
+} else if (document.URL.search("www\.geocaching\.com\/plan\/lists") >= 0) {
     modifyBookmarkList();
 } else if (document.URL.search("www\.geocaching\.com\/seek\/nearest\.aspx") >= 0) {
     modifySearchResultList();
@@ -166,6 +166,7 @@ function modifyCacheDetails() {
 
     var go2olpDiv = document.createElement("div");
     go2olpDiv.setAttribute("class", "CacheDetailNavigationWidget Spacing");
+    go2olpDiv.style.marginBottom = "1.5em";
 
     var go2olpHeader = document.createElement("h3");
     go2olpHeader.setAttribute("class", "WidgetHeader");
@@ -193,30 +194,55 @@ function modifyCacheDetails() {
 }
 
 function modifyBookmarkList() {
-    // TODO: columns sort, next page
+    let lastProcessedUrl = null;
+    function observeUrlChanges() {
+        let currentUrl = location.href;
+        // Monitor URL changes
+        const observer = new MutationObserver(() => {
+            if (location.href !== currentUrl) {
+                currentUrl = location.href;
+                lastProcessedUrl = null;
+                // Remove possible header and columns from previous runs
+                document.querySelector('.oc-column-header')?.remove();
+                document.querySelectorAll('.oc-column').forEach(el => el.remove());
+                modify();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
 
-    debug("modify bookmark list");
+    function modify() {
+        // Not on overview page and only once per URL change
+        if (location.href === "https://www.geocaching.com/plan/lists" || lastProcessedUrl === location.href) return;
+        lastProcessedUrl = location.href;
+        debug("modify bookmark list");
+        const selector = 'thead[data-tooltip-id="list-details-table-header"] th';
+        waitForElementThenRun(selector, function() {
+            // get table header
+            var th = document.querySelectorAll(selector);
+            var last_th = th[th.length - 1];
 
-    const selector = 'thead[data-tooltip-id="list-details-table-header"] th';
-    waitForElementThenRun(selector, function() {
-        // get table header
-        var th = document.querySelectorAll(selector);
-        var last_th = th[th.length- 1];
+            // add OC header
+            var deep_copy = last_th.cloneNode(true);
+            deep_copy.querySelector('span').textContent = 'OC';
+            deep_copy.classList.add('oc-column-header');
+            th[0].parentNode.appendChild(deep_copy);
 
-        // add OC header
-        var deep_copy = last_th.cloneNode(true);
-        deep_copy.querySelector('span').textContent = 'OC'
-        th[0].parentNode.appendChild(deep_copy);
-
-        // add OC links to rows
-        var tableRows = document.getElementsByClassName('list-geocache-row');
-        for(var i = 0; i < tableRows.length; i++) {
-            var gcCode = tableRows[i].querySelectorAll('.geocache-meta>span')[1].textContent;
-            var td = document.createElement("td");
-            td.appendChild(createOCLink(gcCode));
-            tableRows[i].appendChild(td);
-        }
-    });
+            // add OC links to rows
+            var tableRows = document.getElementsByClassName('list-geocache-row');
+            for (var i = 0; i < tableRows.length; i++) {
+                var gcCode = tableRows[i].querySelectorAll('.geocache-meta>span')[1].textContent;
+                var td = document.createElement("td");
+                // Inactive caches get light gray background, active caches get white background
+                const isInactive = tableRows[i].classList.contains("faded");
+                td.classList.add(isInactive ? "bg-white/[.38]" : "bg-white", "text-base", "oc-column");
+                td.appendChild(createOCLink(gcCode));
+                tableRows[i].appendChild(td);
+            }
+        });
+    }
+    modify();
+    observeUrlChanges();
 }
 
 function modifySearchResultList() {
