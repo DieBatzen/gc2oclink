@@ -189,8 +189,10 @@ function modifyCacheDetails() {
     go2olpDiv.appendChild(go2olpBody);
 
     var lnk = document.getElementById("ctl00_ContentBody_lnkTravelBugs");
-	lnk.parentNode.insertBefore(go2olpDiv, lnk);
-	lnk.parentNode.removeChild(lnk);
+    if (lnk) {
+        lnk.parentNode.insertBefore(go2olpDiv, lnk);
+        lnk.parentNode.removeChild(lnk);
+    }
 }
 
 function modifyBookmarkList() {
